@@ -1,0 +1,92 @@
+import cv2
+import urllib.request
+import numpy as np
+
+stream = urllib.request.urlopen('http://192.168.43.129:81/stream')
+bytes = bytes()
+while True:
+    bytes += stream.read(1024)
+    a = bytes.find(b'\xff\xd8')
+    b = bytes.find(b'\xff\xd9')
+    if a != -1 and b != -1:
+        jpg = bytes[a:b+2]
+        bytes = bytes[b+2:]
+        i = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
+        cv2.imshow('i', i)
+        if cv2.waitKey(1) == 27:
+            exit(0)
+
+**************************************************9
+import urllib.request
+import cv2
+import numpy as np
+import turtle
+import time
+
+from pynput.keyboard import Key, Controller
+
+keyboard = Controller()
+
+cap = urllib.request.urlopen('http://192.168.43.129:81/stream')
+
+emre = turtle.Turtle()
+t = 0
+while (True):
+    # Capture frame-by-frame
+    frame = cap.read()
+
+    detector = cv2.SimpleBlobDetector_create()
+    # Detect blobs and capture the coordinates
+    keypoints = detector.detect(frame)
+    # Mark detected dots with red circles
+    fr = cv2.drawKeypoints(frame, keypoints, np.array([]), (0, 0, 255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+
+    # Convert keypoints' coordinates to (x,y) formate in numpy array
+    pts = cv2.KeyPoint_convert(keypoints)
+
+    index = 0
+    temp = 0
+
+    for i, j in pts:
+        x = int(round(j))
+        y = int(round(i))
+        blue, green, red = frame[x, y]
+        if int(green) > int(blue + red):
+            print("right")
+
+            emre.right(1)
+            emre.forward((1))
+            t = 0
+            keyboard.press(Key.right)
+            time.sleep(1 / 4)
+            keyboard.release(Key.right)
+
+        elif int(blue) > int(green + red):
+            print("left")
+            t = 0
+            emre.left(1)
+            emre.forward((1))
+
+            # Press and release space
+            keyboard.press(Key.left)
+            time.sleep(1/4)
+            keyboard.release(Key.left)
+
+        """elif red > (blue+green) and t == 0 :
+            print("stop")
+            time.sleep(5)
+            t += 1"""
+
+    emre.forward(1)
+
+    # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)     #makes it gray
+
+    # Display the resulting frame and close the window when press to esc
+    cv2.imshow('Simulator', fr)
+
+    if cv2.waitKey(1) & 0xFF == ord('\x1b'):
+        break
+
+# When everything done, release the capture
+cap.release()
+cv2.destroyAllWindows()
